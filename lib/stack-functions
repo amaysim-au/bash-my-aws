@@ -34,6 +34,7 @@
 # And don't forget, these naming conventions are completely optional.
 ##
 
+source $(dirname ${BASH_SOURCE[0]})/shared.inc
 
 # List CF stacks
 #
