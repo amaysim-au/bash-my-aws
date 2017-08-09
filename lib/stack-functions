@@ -39,6 +39,34 @@
 #
 # To make it fly we omit stacks with status of DELETE_COMPLETE
 stacks() {
+  # type: query
+  # list the stacks
+  # TODO: allow filtering for resources
+  local inputs=$(__bma_read_inputs $@)
+
+  if __bma_read_switches ${inputs} | grep ^--debug > /dev/null; then
+    BMA_DEBUG=true
+  else
+    BMA_DEBUG=false
+  fi
+
+  local grep_args=$(__bma_read_resources $inputs)
+  local query=$(__bma_read_switches $inputs | grep ^--query | cut -d\  -f2-)
+  local output=$(__bma_read_switches $inputs | grep ^--output | cut -d\  -f2-)
+
+  if ${BMA_DEBUG}; then
+    echo "inputs: ${inputs}"
+    echo "instance_ids: ${instance_ids}"
+    echo "query: ${query}"
+    echo "output: ${output}"
+  fi
+
+  [[ -z $query ]] && local query='StackSummaries[][ StackName ]'
+
+  local grep_filter=""
+  for arg in ${grep_args}; do
+    grep_filter+="-e ${arg} "
+  done
 
   aws cloudformation list-stacks                      \
     --stack-status                                    \
@@ -57,9 +85,10 @@ stacks() {
       UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS    \
       UPDATE_ROLLBACK_FAILED                          \
       UPDATE_ROLLBACK_IN_PROGRESS                     \
-    --query "StackSummaries[][ StackName ]"           \
-    --output text                                     |
-    sort
+    --query "${query}"                                \
+    --output ${output:-"text"}                        |
+    sort                                              |
+    grep --color=never ${grep_filter:-".*"}
 }
 
 stack-cancel-update() {
